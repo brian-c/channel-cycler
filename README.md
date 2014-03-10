@@ -1,5 +1,22 @@
 ```js
-new ChannelCycler(['0.png', '1.png', '2.png', '3.png']);
+// Create:
+var cc = new ChannelCycler(['0.png', '1.png', '2.png', '3.png']);
+
+// Add it to the DOM:
+document.body.appendChild(cc.canvas);
+
+// Start cycling colors:
+cc.start();
+
+// Change the time it takes to make one color cycle:
+cc.period = 100; // Fast!
+cc.period = 1000; // Slow!
+
+// Stop cycling:
+cc.stop();
+
+// Cleanup when you're done:
+cc.destroy();
 ```
 
 To run the example, throw all those asteroid images into an "images" directory.

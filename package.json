@@ -1,6 +1,6 @@
 {
   "name": "channel-cycler",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "./channel-cycler.js",
   "devDependencies": {
     "serveup": "~0.0.5"
