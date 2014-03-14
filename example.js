@@ -14,6 +14,7 @@
 
   var blackAndWhiteCheckbox = document.querySelector('[name="black-and-white"]');
   var cycleCheckbox = document.querySelector('[name="cycle"]');
+  var lumaCheckbox = document.querySelector('[name="luma"]');
   var periodSlider = document.querySelector('[name="period"]');
   var periodOutput = document.querySelector('[name="for-period"]');
 
@@ -55,6 +56,8 @@
 
     window.cc.period = parseFloat(periodSlider.value);
     periodOutput.value = window.cc.period;
+
+    window.cc.compensateForLuma = lumaCheckbox.checked;
 
     filenameContainer.innerHTML = channelSets[index][0];
 
@@ -102,6 +105,10 @@
     } else {
       window.cc.stop();
     }
+  });
+
+  lumaCheckbox.addEventListener('change', function() {
+    window.cc.compensateForLuma = lumaCheckbox.checked;
   });
 
   periodSlider.addEventListener('input', function() {

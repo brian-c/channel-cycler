@@ -22,6 +22,7 @@
   ChannelCycler.prototype.channels = null;
   ChannelCycler.prototype.canvas = null;
 
+  ChannelCycler.prototype.compensateForLuma = false;
   ChannelCycler.prototype.hueRotate = 0;
   ChannelCycler.prototype.fps = 24;
   ChannelCycler.prototype.period = 400;
@@ -80,7 +81,29 @@
     var progress = i / channels;
     var hue = 360 * progress;
     var rotatedHue = (hue + this.hueRotate) % 360;
-    return 'hsl(' + rotatedHue + ', 100%, 50%)';
+    var color = 'hsl(' + rotatedHue + ', 100%, 50%)';
+
+    if (this.compensateForLuma) {
+      var luma = this.getColorLuma(color);
+      var compensation = 1 - Math.sqrt(0.5 * (luma / 0xFF));
+      color = 'hsl(' + rotatedHue + ', 100%, ' + Math.floor(100 * compensation) + '%)';
+    }
+
+    return color;
+  };
+
+  ChannelCycler.prototype.getColorLuma = function(color) {
+    var lumaCanvas = document.createElement('canvas');
+    lumaCanvas.width = 1;
+    lumaCanvas.height = 1;
+
+    var lumaCtx = lumaCanvas.getContext('2d');
+    lumaCtx.fillStyle = color;
+    lumaCtx.fillRect(0, 0, 1, 1);
+
+    var rgba = lumaCtx.getImageData(0, 0, 1, 1).data;
+
+    return (0.2126 * rgba[0]) + (0.7152 * rgba[1]) + (0.0722 * rgba[2]);
   };
 
   ChannelCycler.prototype.colorizeChannel = function(source, channel, color) {
