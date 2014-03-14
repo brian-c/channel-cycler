@@ -1,7 +1,12 @@
-// TODO: This whole thing is sloppy.
-
 ;(function() {
   'use strict';
+
+  var HAS_BLENDS = (function() {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.globalCompositeOperation = 'multiply';
+    return ctx.globalCompositeOperation === 'multiply';
+  }());
 
   function ChannelCycler(sources) {
     this.sources = sources.map(this.canvasFromSrc, this);
@@ -63,10 +68,10 @@
   };
 
   ChannelCycler.prototype.render = function() {
-    this.sources.forEach(function(source, i, sources) {
-      var color = this.getChannelColor(i, sources.length);
-      this.colorizeChannel(source, this.channels[i], color);
-    }, this);
+    for (var i = 0; i < this.sources.length; i++) {
+      var color = this.getChannelColor(i, this.sources.length);
+      this.colorizeChannel(this.sources[i], this.channels[i], color);
+    }
 
     this.mergeChannels(this.channels, this.canvas);
   };
@@ -82,27 +87,73 @@
     channel.width = source.width;
     channel.height = source.height;
 
-    var ctx = channel.getContext('2d');
-    ctx.drawImage(source, 0, 0);
-    ctx.globalCompositeOperation = 'screen';
+    var channelCtx = channel.getContext('2d');
+    channelCtx.drawImage(source, 0, 0);
 
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, channel.width, channel.height);
+    if (HAS_BLENDS) {
+      channelCtx.fillStyle = color;
+      channelCtx.globalCompositeOperation = 'screen';
+      channelCtx.fillRect(0, 0, channel.width, channel.height);
+    } else {
+      var colorCanvas = document.createElement('canvas');
+      colorCanvas.width = source.width;
+      colorCanvas.height = source.height;
+
+      var colorCanvasCtx = colorCanvas.getContext('2d');
+      colorCanvasCtx.fillStyle = color;
+      colorCanvasCtx.fillRect(0, 0, colorCanvas.width, colorCanvas.height);
+
+      this.blendManually(colorCanvas, channel, this.screenBlend);
+    }
+  };
+
+  ChannelCycler.prototype.screenBlend = function(top, bottom) {
+    return 0xFF * (1 - ((1 - (top / 0xFF)) * (1 - (bottom / 0xFF))));
   };
 
   ChannelCycler.prototype.mergeChannels = function(channels, output) {
     output.width = 0;
     output.height = 0;
-    channels.forEach(function(channel) {
-      output.width = Math.max(output.width, channel.width);
-      output.height = Math.max(output.height, channel.height);
-    });
+    for (var i = 0; i < channels.length; i++) {
+      output.width = Math.max(output.width, channels[i].width);
+      output.height = Math.max(output.height, channels[i].height);
+    }
 
-    var context = output.getContext('2d');
-    channels.forEach(function(channel) {
-      context.globalCompositeOperation = 'multiply';
-      context.drawImage(channel, 0, 0);
-    });
+    var outputCtx = output.getContext('2d');
+    outputCtx.fillStyle = 'white';
+    outputCtx.fillRect(0, 0, output.width, output.height);
+
+    if (HAS_BLENDS) {
+      outputCtx.globalCompositeOperation = 'multiply';
+    }
+
+    for (var j = 0; j < channels.length; j++) {
+      if (HAS_BLENDS) {
+        outputCtx.drawImage(channels[j], 0, 0);
+      } else {
+        this.blendManually(channels[j], output, this.multiplyBlend);
+      }
+    }
+  };
+
+  ChannelCycler.prototype.blendManually = function(top, bottom, blendFn) {
+    var bottomCtx = bottom.getContext('2d');
+    var bottomData = bottomCtx.getImageData(0, 0, bottom.width, bottom.height);
+    var bottomPixels = bottomData.data;
+
+    var topCtx = top.getContext('2d');
+    var topPixels = topCtx.getImageData(0, 0, bottom.width, bottom.height).data;
+
+    for (var i = 0; i < bottomPixels.length; i++) {
+      if ((i + 1) % 4 === 0) continue;
+      bottomPixels[i] = blendFn(topPixels[i], bottomPixels[i]);
+    }
+
+    bottomCtx.putImageData(bottomData, 0, 0);
+  };
+
+  ChannelCycler.prototype.multiplyBlend = function(top, bottom) {
+    return (top * bottom) / 0xFF;
   };
 
   ChannelCycler.prototype.stop = function() {
