@@ -11,13 +11,22 @@
   }());
 
   function ChannelCycler(sources) {
-    this.sources = sources.map(this.canvasFromSrc, this);
-    this.channels = sources.map(this.canvasFromSrc, this);
+    this._waitingFor = [];
+    this._cycle = this._cycle.bind(this);
+
+    this.sources = [];
+    this.channels = [];
+
+    for (var i = 0; i < sources.length; i++) {
+      var source = this.canvasFromSrc(sources[i], 'channel-cycler-source', this._onLoadSrc, this);
+      var channel = this.canvasFromSrc(sources[i], 'channel-cycler-channel', this._onLoadSrc, this);
+      this.sources.push(source);
+      this.channels.push(channel);
+      this._waitingFor.push(source, channel);
+    }
 
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'channel-cycler';
-
-    this._cycle = this._cycle.bind(this);
   }
 
   ChannelCycler.prototype.sources = null;
@@ -29,15 +38,13 @@
   ChannelCycler.prototype.fps = 24;
   ChannelCycler.prototype.period = 400;
 
-  ChannelCycler.prototype._loading = 0;
+  ChannelCycler.prototype._waitingFor = null;
   ChannelCycler.prototype._cycleTimeout = NaN;
 
-  ChannelCycler.prototype.canvasFromSrc = function(src) {
+  ChannelCycler.prototype.canvasFromSrc = function(src, className, callback, context) {
     var canvas = document.createElement('canvas');
-    canvas.className = 'channel-cycler-channel';
+    canvas.className = className;
     var ctx = canvas.getContext('2d');
-
-    this._loading += 1;
 
     var img = new Image();
     img.onload = function() {
@@ -45,17 +52,22 @@
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
-      this._loading -= 1;
-      if (this._loading === 0) {
-        this.onLoad();
-      }
-    }.bind(this);
+      callback.call(context, canvas);
+    };
 
     img.src = src;
     return canvas;
   };
 
-  ChannelCycler.prototype.onLoad = function() {
+  ChannelCycler.prototype._onLoadSrc = function(canvas) {
+    this._waitingFor.splice(this._waitingFor.indexOf(canvas), 1);
+
+    if (this._waitingFor.length === 0) {
+      this._onLoad();
+    }
+  };
+
+  ChannelCycler.prototype._onLoad = function() {
     this.render();
   };
 
