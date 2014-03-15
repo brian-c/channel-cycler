@@ -1,7 +1,9 @@
 ;(function() {
   'use strict';
 
-  var HAS_BLENDS = (function() {
+  var FORCE_MANUAL_BLENDING = !!~location.search.indexOf('blending=0');
+
+  var HAS_BLENDING = !FORCE_MANUAL_BLENDING && (function() {
     var canvas = document.createElement('canvas');
     var ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'multiply';
@@ -77,9 +79,8 @@
     this.mergeChannels(this.channels, this.canvas);
   };
 
-  ChannelCycler.prototype.getChannelColor = function(i, channels) {
-    var progress = i / channels;
-    var hue = 360 * progress;
+  ChannelCycler.prototype.getChannelColor = function(index, channels) {
+    var hue = 360 * (index / channels);
     var rotatedHue = (hue + this.hueRotate) % 360;
     var color = 'hsl(' + rotatedHue + ', 100%, 50%)';
 
@@ -113,7 +114,7 @@
     var channelCtx = channel.getContext('2d');
     channelCtx.drawImage(source, 0, 0);
 
-    if (HAS_BLENDS) {
+    if (HAS_BLENDING) {
       channelCtx.fillStyle = color;
       channelCtx.globalCompositeOperation = 'screen';
       channelCtx.fillRect(0, 0, channel.width, channel.height);
@@ -146,12 +147,12 @@
     outputCtx.fillStyle = 'white';
     outputCtx.fillRect(0, 0, output.width, output.height);
 
-    if (HAS_BLENDS) {
+    if (HAS_BLENDING) {
       outputCtx.globalCompositeOperation = 'multiply';
     }
 
     for (var j = 0; j < channels.length; j++) {
-      if (HAS_BLENDS) {
+      if (HAS_BLENDING) {
         outputCtx.drawImage(channels[j], 0, 0);
       } else {
         this.blendManually(channels[j], output, this.multiplyBlend);
@@ -189,6 +190,7 @@
   };
 
   window.ChannelCycler = ChannelCycler;
+
   if (typeof module !== 'undefined') {
     module.exports = ChannelCycler;
   }
