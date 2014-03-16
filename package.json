@@ -3,9 +3,14 @@
   "version": "0.0.4",
   "main": "./channel-cycler.js",
   "devDependencies": {
-    "serveup": "~0.0.5"
+    "browserify": "^3.32.1",
+    "faucet": "~0.0.1",
+    "serveup": "~0.0.5",
+    "tape": "^2.10.2",
+    "testling": "^1.6.1"
   },
   "scripts": {
-    "start": "serveup . --port 2634"
+    "start": "serveup . --port 2634",
+    "test": "browserify ./test/*.js | testling -x \"open --background\" | faucet"
   }
 }
