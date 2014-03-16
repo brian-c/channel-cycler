@@ -84,28 +84,38 @@
 
   ChannelCycler.prototype.render = function() {
     for (var i = 0; i < this.sources.length; i++) {
-      var color = this.getChannelColor(i, this.sources.length);
+      var hue = this.getHue(i, this.sources.length, this.hueRotate);
+      var saturation = '100%';
+      var lightness = '50%';
+
+      var color = this.getColor(hue, saturation, lightness);
+
+      if (this.compensateForLuma) {
+        var luma = this.getLuma(color);
+        // TODO: This is totally arbitrary.
+        var compensation = 1 - Math.sqrt(0.5 * (luma / 0xFF));
+        lightness = Math.floor(100 * compensation) + '%';
+
+        color = this.getColor(hue, saturation, lightness);
+      }
+
       this.colorizeChannel(this.sources[i], this.channels[i], color);
     }
 
     this.mergeChannels(this.channels, this.canvas);
   };
 
-  ChannelCycler.prototype.getChannelColor = function(index, channels) {
-    var hue = 360 * (index / channels);
-    var rotatedHue = (hue + this.hueRotate) % 360;
-    var color = 'hsl(' + rotatedHue + ', 100%, 50%)';
-
-    if (this.compensateForLuma) {
-      var luma = this.getColorLuma(color);
-      var compensation = 1 - Math.sqrt(0.5 * (luma / 0xFF));
-      color = 'hsl(' + rotatedHue + ', 100%, ' + Math.floor(100 * compensation) + '%)';
-    }
-
-    return color;
+  ChannelCycler.prototype.getHue = function(index, total, start) {
+    var progress = index / total;
+    var angle = progress * 360;
+    return (start + angle) % 360;
   };
 
-  ChannelCycler.prototype.getColorLuma = function(color) {
+  ChannelCycler.prototype.getColor = function(hue, saturation, lightness) {
+    return 'hsl(' + hue + ', ' + saturation + ', ' + lightness + ')';
+  };
+
+  ChannelCycler.prototype.getLuma = function(color) {
     var lumaCanvas = document.createElement('canvas');
     lumaCanvas.width = 1;
     lumaCanvas.height = 1;
